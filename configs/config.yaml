@@ -15,24 +15,34 @@ paths:
 
 dataset:
   name: "DEAP"
+  version: "original_bdf"   # 使用原始 .bdf 版本,自己做完整预处理
   sfreq_original: 512       # DEAP 原始采样率
-  sfreq_target: 128         # 预处理版已降采样到 128 Hz
-  n_channels_eeg: 32
-  n_trials: 40
+  sfreq_target: 256         # ICA/训练前降采样目标(512->256,ICA 快 4 倍)
+  n_channels_eeg: 32        # EEG 通道数
+  n_channels_total: 48      # 含 8 路外周(EOG/EMG 等) + 8 路其他;实际以 P1 探测为准
+  n_trials: 40              # 每被试 40 段视频
   trial_duration_s: 60      # 刺激时长
   baseline_duration_s: 3    # 预刺激基线
+  # DEAP 触发码(来自官方 readme.txt):
+  # 1=start of experiment, 2=video sync, 3=fixation, 4=music start,
+  # 5=video start, 7=end of video, 8=end of experiment
+  event_id_video_start: 4
 
 preprocess:
+  # 原始版需要的完整流水线
+  resample_to: 256          # 第一步降采样,加速后续
   bandpass:
-    l_freq: 4.0             # 去掉 0.5-4Hz 的慢漂,保留 theta 起
-    h_freq: 45.0            # 避开 50Hz 工频
-  notch_freq: 50.0
-  reref: "average"
+    l_freq: 1.0             # 原始数据从 1Hz 起去慢漂和直流,比预处理版 4Hz 更保守
+    h_freq: 50.0            # 去 50Hz 前先低通到 50(notch 会扣掉)
+  notch_freq: 50.0          # 工频陷波
+  reref: "average"          # 平均参考
   ica:
     n_components: 20
     random_state: 42
     method: "fastica"
-    eog_channels: ["hEOG", "vEOG"]   # DEAP 的眼电通道名,按实际数据调整
+    # DEAP 原始 bdf 里的外周通道(索引 33-40,P1 跑通后按实际通道名更新)
+    eog_channels: ["EXG1", "EXG2", "EXG3", "EXG4"]
+    emg_channels: ["EXG5", "EXG6", "EXG7", "EXG8"]
 
 epoching:
   tmin: -3.0                # 基线 3s

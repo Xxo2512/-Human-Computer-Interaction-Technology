@@ -68,14 +68,27 @@ python -c "import mne, sklearn, numpy, scipy, pandas; print('OK')"
 
 ## 数据准备
 
-DEAP 数据需要 [申请下载](https://www.eecs.qmul.ac.uk/mmv/datasets/deap/),不提交到仓库。下载后放置:
+本项目**使用 DEAP 原始 `.bdf` 版本**,自己完成完整预处理流程,以满足任务 1
+对滤波/去伪迹/分段/基线校正的展示要求。
+
+数据不提交到仓库(`.gitignore` 已屏蔽)。下载后放置:
 
 ```
 data/raw/
-├── data_preprocessed_python/    # 预处理版 (.dat)
-│   ├── s01.dat ... s32.dat
-└── data_original/               # 原始版 (.bdf, 可选,用于演示滤波/去伪迹)
+├── s01.bdf
+├── s02.bdf
+├── ...
+└── s32.bdf          # 来自 Kaggle 或 DEAP 官方
 ```
+
+**第一步:数据结构探测**(任何人拿到数据先跑这个,确认通道名/采样率/事件码):
+
+```bash
+python scripts/inspect_bdf.py data/raw/s01.bdf
+```
+
+根据输出结果,P1 需要更新 `configs/config.yaml` 中的 `eog_channels` 和
+`event_id_video_start` 字段。
 
 ## 分支策略
 
