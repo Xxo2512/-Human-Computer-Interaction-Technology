@@ -1,0 +1,75 @@
+# 全局配置 - 所有成员的代码都从这里读参数
+# 修改这个文件前先和组内同步,避免复现不一致
+
+project:
+  name: "eeg-emotion-deap"
+  seed: 42
+
+paths:
+  data_raw: "data/raw"
+  data_preproc: "data/preproc"
+  data_epochs: "data/epochs"
+  features: "features"
+  models: "models"
+  figs: "reports/figs"
+
+dataset:
+  name: "DEAP"
+  sfreq_original: 512       # DEAP 原始采样率
+  sfreq_target: 128         # 预处理版已降采样到 128 Hz
+  n_channels_eeg: 32
+  n_trials: 40
+  trial_duration_s: 60      # 刺激时长
+  baseline_duration_s: 3    # 预刺激基线
+
+preprocess:
+  bandpass:
+    l_freq: 4.0             # 去掉 0.5-4Hz 的慢漂,保留 theta 起
+    h_freq: 45.0            # 避开 50Hz 工频
+  notch_freq: 50.0
+  reref: "average"
+  ica:
+    n_components: 20
+    random_state: 42
+    method: "fastica"
+    eog_channels: ["hEOG", "vEOG"]   # DEAP 的眼电通道名,按实际数据调整
+
+epoching:
+  tmin: -3.0                # 基线 3s
+  tmax: 60.0                # 刺激 60s
+  baseline: [null, 0]       # (None, 0) -> 用刺激前做基线
+
+labels:
+  # valence 三分类阈值(DEAP 评分范围 1-9)
+  valence_low: 3.5          # <=3.5 -> 消极
+  valence_high: 6.5         # >=6.5 -> 积极;中间 -> 中性
+  class_names: ["negative", "neutral", "positive"]
+
+features:
+  bands:
+    theta: [4, 8]
+    alpha: [8, 13]
+    beta:  [13, 30]
+    gamma: [30, 45]
+  psd:
+    method: "welch"
+    n_fft: 256
+    n_overlap: 128
+  # 额叶不对称对 (左, 右) - 情感识别强特征
+  asymmetry_pairs:
+    - ["F3", "F4"]
+    - ["F7", "F8"]
+    - ["FC5", "FC6"]
+
+models:
+  cv_folds: 5
+  scoring: ["accuracy", "f1_macro"]
+  class_weight: "balanced"
+
+transfer:
+  strategy: "loso"          # Leave-One-Subject-Out
+  methods:
+    - "none"                # 基线:无迁移
+    - "zscore_per_subject"  # 每被试 z-score
+    - "coral"               # CORAL 协方差对齐
+  finetune_ratio: 0.1       # 目标域用多少比例微调
